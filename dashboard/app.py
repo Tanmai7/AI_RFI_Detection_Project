@@ -32,6 +32,31 @@ uploaded_file = st.file_uploader(
     "Upload RF signal file (CSV format)",
     type=["csv"]
 )
+import pandas as pd
+import numpy as np
+
+if uploaded_file is not None:
+    try:
+        data = pd.read_csv(uploaded_file)
+
+        st.subheader("📄 Uploaded Data Preview")
+        st.dataframe(data.head())
+
+        # Check numeric data
+        if not np.issubdtype(data.dtypes[0], np.number):
+            st.error("❌ Invalid file: Data must contain only numeric values.")
+            st.stop()
+
+        # Minimum length check
+        if data.shape[0] < 100:
+            st.error("❌ Invalid file: Signal data is too short for analysis.")
+            st.stop()
+
+        st.success("✅ File validated successfully. Ready for analysis.")
+
+    except Exception as e:
+        st.error("❌ Error reading file. Please upload a valid CSV file.")
+        st.stop()
 
 st.info("""
 **Expected input:**
