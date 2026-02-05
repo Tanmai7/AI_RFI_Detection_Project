@@ -1,9 +1,33 @@
 import streamlit as st
+import pandas as pd
+import numpy as np
+import joblib
+import matplotlib.pyplot as plt
+
+from scipy.stats import skew, kurtosis
+
+# ===============================
+# PAGE CONFIG
+# ===============================
 
 st.set_page_config(
     page_title="AI-Based RFI Detection",
     layout="wide"
 )
+
+# ===============================
+# FEATURE EXTRACTION FUNCTION
+# ===============================
+
+def extract_features(signal):
+    return [
+        np.mean(signal),
+        np.std(signal),
+        np.max(signal),
+        np.min(signal),
+        skew(signal),
+        kurtosis(signal)
+    ]
 
 # ===============================
 # HEADER
@@ -32,8 +56,16 @@ uploaded_file = st.file_uploader(
     "Upload RF signal file (CSV format)",
     type=["csv"]
 )
-import pandas as pd
-import numpy as np
+
+st.info("""
+**Expected input:**
+- A CSV file containing numeric RF signal values
+- Minimum 100 samples required
+""")
+
+# ===============================
+# FILE VALIDATION
+# ===============================
 
 if uploaded_file is not None:
     try:
@@ -42,115 +74,76 @@ if uploaded_file is not None:
         st.subheader("📄 Uploaded Data Preview")
         st.dataframe(data.head())
 
-        # Check numeric data
+        # Numeric validation
         if not np.issubdtype(data.dtypes[0], np.number):
             st.error("❌ Invalid file: Data must contain only numeric values.")
             st.stop()
 
-        # Minimum length check
+        # Length validation
         if data.shape[0] < 100:
             st.error("❌ Invalid file: Signal data is too short for analysis.")
             st.stop()
 
         st.success("✅ File validated successfully. Ready for analysis.")
 
-    except Exception as e:
+    except Exception:
         st.error("❌ Error reading file. Please upload a valid CSV file.")
         st.stop()
 
-st.info("""
-**Expected input:**
-- A CSV file containing numeric RF signal values
-- Each column represents a signal feature or time-series values
-""")
+    # ===============================
+    # RFI DETECTION
+    # ===============================
 
-st.divider()
+    st.divider()
+    st.header("🚨 RFI Detection Output")
 
-# ===============================
-# SIGNAL VISUALIZATION SECTION
-# ===============================
+    signal_values = data.values.flatten()
+    features = np.array(extract_features(signal_values)).reshape(1, -1)
 
-st.header("📈 Signal Visualization")
+    detector = joblib.load("models/rfi_detector.pkl")
+    detection_result = detector.predict(features)[0]
 
-st.write("⏳ **Time-Domain Signal Plot**")
-st.write("""
-This plot shows how the signal amplitude changes over time.
-Sudden spikes or distortions may indicate interference.
-""")
+    if detection_result == 1:
+        st.error("⚠️ Interference Detected: YES")
+    else:
+        st.success("✅ Interference Detected: NO")
 
-st.write("📊 *(Plot will appear here after file upload)*")
+    st.markdown("""
+    ### 🧠 What does this result mean?
 
-st.write("🔊 **Frequency Spectrum (FFT) Plot**")
-st.write("""
-This plot converts the signal from time domain to frequency domain.
-Sharp peaks at unexpected frequencies indicate interference sources.
-""")
+    - **YES** → The signal shows abnormal behavior compared to clean RF signals  
+    - **NO** → The signal follows normal RF characteristics  
 
-st.write("📊 *(FFT plot will appear here after file upload)*")
+    ### 🔍 How was this decided?
 
-st.write("🌈 **Spectrogram (Time–Frequency Plot)**")
-st.write("""
-This plot shows how signal frequency content changes over time.
-It helps identify when and where interference occurs.
-""")
+    The system extracts statistical features such as:
+    - Average signal level
+    - Signal variation
+    - Peak values
+    - Shape characteristics (skewness & kurtosis)
 
-st.write("📊 *(Spectrogram will appear here after file upload)*")
+    These features are analyzed using a **Random Forest Machine Learning model**
+    trained on known RF interference patterns.
+    """)
 
-st.divider()
+    st.divider()
 
-# ===============================
-# RFI DETECTION SECTION
-# ===============================
+    # ===============================
+    # PLACEHOLDERS (NEXT STEPS)
+    # ===============================
 
-st.header("🚨 RFI Detection Output")
+    st.header("📈 Signal Visualization")
+    st.write("⏳ Time-domain, FFT, and spectrogram plots will appear here.")
 
-st.write("**Interference Status:**")
-st.write("➡️ *(Yes / No will appear here)*")
+    st.divider()
 
-st.write("""
-**What this means:**  
-- **Yes** → The signal contains Radio Frequency Interference  
-- **No** → The signal is clean without interference
+    st.header("🧠 RFI Classification Output")
+    st.write("➡️ Interference type will be shown here in the next step.")
 
-This decision is made using a trained Random Forest detection model.
-""")
+    st.divider()
 
-st.divider()
+    st.header("📊 Model Performance Metrics")
+    st.write("➡️ Accuracy, Precision, Recall, F1-score will be shown here.")
 
-# ===============================
-# RFI CLASSIFICATION SECTION
-# ===============================
-
-st.header("🧠 RFI Classification Output")
-
-st.write("**Interference Type:**")
-st.write("➡️ *(Narrowband / Broadband / Impulsive)*")
-
-st.write("""
-**Why this classification is important:**  
-Different interference types affect communication systems differently.
-Identifying the type helps in choosing proper mitigation techniques.
-""")
-
-st.divider()
-
-# ===============================
-# PERFORMANCE METRICS SECTION
-# ===============================
-
-st.header("📊 Model Performance Metrics")
-
-st.write("""
-This section shows how well the Machine Learning model performs.
-Metrics include:
-- Accuracy
-- Precision
-- Recall
-- F1-Score
-""")
-
-st.write("📋 *(Metrics table will appear here)*")
-
-st.divider()
-
-st.success("Dashboard layout loaded successfully. Awaiting data upload.")
+else:
+    st.success("Dashboard loaded successfully. Awaiting file upload.")
