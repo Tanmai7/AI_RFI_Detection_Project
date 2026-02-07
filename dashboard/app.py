@@ -106,7 +106,7 @@ if uploaded_file is not None:
 
         st.markdown("""
         **Explanation:**  
-        The model checks statistical patterns of the signal.  
+        The model analyzes statistical patterns in the signal.  
         Abnormal variations indicate interference.
         """)
 
@@ -120,7 +120,7 @@ if uploaded_file is not None:
         fs = 1000
         time = np.arange(len(signal)) / fs
 
-        # Time-domain
+        # Time-domain plot
         fig, ax = plt.subplots()
         ax.plot(time, signal)
         ax.set_title("Time-Domain Signal")
@@ -128,9 +128,9 @@ if uploaded_file is not None:
         ax.set_ylabel("Amplitude")
         st.pyplot(fig)
 
-        st.markdown("Shows signal behavior over time.")
+        st.markdown("Shows how signal amplitude varies over time.")
 
-        # FFT
+        # FFT plot
         yf = np.abs(fft(signal))
         xf = fftfreq(len(signal), 1 / fs)
 
@@ -141,7 +141,7 @@ if uploaded_file is not None:
         ax.set_ylabel("Magnitude")
         st.pyplot(fig)
 
-        st.markdown("Highlights interference frequencies.")
+        st.markdown("Highlights dominant interference frequencies.")
 
         # Spectrogram
         fig, ax = plt.subplots()
@@ -151,7 +151,7 @@ if uploaded_file is not None:
         ax.set_ylabel("Frequency")
         st.pyplot(fig)
 
-        st.markdown("Shows when interference occurs.")
+        st.markdown("Shows when interference occurs over time.")
 
         # ===============================
         # RFI CLASSIFICATION
@@ -172,8 +172,35 @@ if uploaded_file is not None:
         st.success(f"Detected Type: {label_map[class_pred]}")
 
         st.markdown("""
-        **Why this matters:**  
-        Different interference types require different mitigation methods.
+        Different interference types affect communication systems differently.
+        Identifying the type helps in choosing proper mitigation techniques.
+        """)
+
+        # ===============================
+        # PERFORMANCE METRICS
+        # ===============================
+
+        st.divider()
+        st.header("📊 Model Performance Metrics")
+
+        metrics_df = pd.read_csv("results/model_comparison.csv")
+        rf_metrics = metrics_df.loc["Random Forest"]
+
+        metrics_display = pd.DataFrame({
+            "Metric": ["Accuracy", "Precision", "Recall", "F1-Score"],
+            "Value": [
+                rf_metrics["Accuracy"],
+                rf_metrics["Precision"],
+                rf_metrics["Recall"],
+                rf_metrics["F1-Score"]
+            ]
+        })
+
+        st.table(metrics_display)
+
+        st.markdown("""
+        These metrics justify why **Random Forest** was selected
+        as the final model for RFI detection and classification.
         """)
 
     except Exception as e:
